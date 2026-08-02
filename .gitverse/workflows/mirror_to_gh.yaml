@@ -1,0 +1,31 @@
+name: Mirror Repository
+
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+
+jobs:
+  mirror:
+    runs-on: ubuntu-cloud-runner
+    contents: write   # нужно для force push
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0   # полная история
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "Your Name"
+        git config --global user.email "Your e-mail"
+
+    - name: Mirror to Remote
+      env:
+        TARGET_REPO: "https://${{ secrets.GH_MIRROR_ACTOR }}:${{ secrets.GH_MIRROR_TOKEN }}@github.com/${{ secrets.GH_MIRROR_ACTOR }}/${{ secrets.GH_MIRROR_REPO }}"
+      run: |
+        git remote add target $TARGET_REPO
+        git push --mirror --force target
