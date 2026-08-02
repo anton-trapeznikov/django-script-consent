@@ -1,0 +1,19 @@
+{
+  "name": "django-script-consent",
+  "version": "0.2.0",
+  "description": "Django CMP for granular script consent with strict scripts_hash binding",
+  "scripts": {
+    "test": "npm run test:js",
+    "test:js": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@gitverse.ru:2222/lesbeg/django-cookie-consent.git"
+  },
+  "license": "MIT",
+  "type": "commonjs",
+  "devDependencies": {
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1"
+  }
+}

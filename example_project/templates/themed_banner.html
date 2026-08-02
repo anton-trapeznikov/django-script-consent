@@ -1,0 +1,59 @@
+{% load script_consent static %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Themed banner · django-script-consent demo</title>
+  {% consent_scripts "head" %}
+</head>
+<body class="demo-theme-page">
+  {% csrf_token %}
+  {% consent_scripts "body_start" %}
+
+  <div class="demo-theme-shell">
+    <nav class="demo-theme-nav" aria-label="Demo">
+      <a href="{% url 'home' %}">Home</a>
+      <span class="sep">·</span>
+      <a href="{% url 'themed_banner' %}">Themed banner</a>
+      <span class="sep">·</span>
+      <a href="/privacy/">Privacy</a>
+      <span class="sep">·</span>
+      <a href="/admin/">Admin</a>
+    </nav>
+
+    <article class="demo-theme-card">
+      <h1>Themed consent UI</h1>
+      <p>
+        This page uses <strong>self-hosted</strong> Fraunces + Source Sans&nbsp;3
+        and re-skins the CMP via CSS variables (<code>--cc-font</code>, colours, launcher).
+      </p>
+      <p>
+        Use the amber floating button (bottom-right) or the control below to open the banner.
+        Both call the same API: <code>ScriptConsent.open()</code>.
+      </p>
+      <ul class="demo-theme-list">
+        <li>Banner title → display font (Fraunces, local woff2)</li>
+        <li>Banner body &amp; action buttons → Source Sans&nbsp;3 (local woff2)</li>
+        <li>Floating settings button → same palette / type</li>
+      </ul>
+
+      <div class="demo-theme-actions">
+        <button
+          type="button"
+          class="demo-open-banner"
+          onclick="window.ScriptConsent && ScriptConsent.open && ScriptConsent.open()"
+        >
+          Open consent banner
+        </button>
+      </div>
+    </article>
+  </div>
+
+  {% consent_banner %}
+  {% consent_scripts "body_end" %}
+
+  {# After banner.css (included by consent_banner) so variables and @font-face win #}
+  <link rel="stylesheet" href="{% static 'demo/banner-theme.css' %}">
+</body>
+</html>
