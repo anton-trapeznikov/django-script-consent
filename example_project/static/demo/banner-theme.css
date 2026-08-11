@@ -1,0 +1,238 @@
+/**
+ * Demo theme for script_consent banner + floating settings button.
+ * Overrides CSS variables consumed by script_consent/css/banner.css
+ * and adds a light page chrome with the same typefaces.
+ *
+ * Fonts are self-hosted under static/demo/fonts/ (no Google Fonts).
+ */
+
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("fonts/source-sans-3-400.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("fonts/source-sans-3-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Sans 3";
+  src: url("fonts/source-sans-3-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("fonts/fraunces-500.woff2") format("woff2");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("fonts/fraunces-600.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("fonts/fraunces-700.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --demo-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --demo-body: "Source Sans 3", system-ui, sans-serif;
+
+  /* —— Consent banner / launcher theme —— */
+  --cc-font: var(--demo-body);
+  --cc-bg: #fffbeb;
+  --cc-fg: #1c1917;
+  --cc-muted: #78716c;
+  --cc-border: #fcd34d;
+  --cc-accent: #b45309;
+  --cc-accent-fg: #fffbeb;
+  --cc-secondary-bg: #fef3c7;
+  --cc-secondary-fg: #78350f;
+  --cc-shadow: 0 -8px 40px rgba(180, 83, 9, 0.18);
+  --cc-radius: 16px;
+  --cc-focus: 0 0 0 3px rgba(180, 83, 9, 0.35);
+
+  --cc-launcher-bg: #b45309;
+  --cc-launcher-fg: #fffbeb;
+  --cc-launcher-border: #92400e;
+  --cc-launcher-shadow: 0 6px 22px rgba(146, 64, 14, 0.35);
+  --cc-launcher-shadow-hover: 0 8px 28px rgba(146, 64, 14, 0.45);
+  --cc-launcher-attention-glow: 0 0 0 7px rgba(245, 158, 11, 0.45);
+  --cc-launcher-size: 3.25rem;
+  --cc-launcher-right: 1.25rem;
+  --cc-launcher-bottom: 1.25rem;
+}
+
+/* Title in the banner uses display face */
+#script-consent-banner .cc-banner__title {
+  font-family: var(--demo-display);
+  font-weight: 600;
+  font-size: clamp(1.05rem, 3.5vw, 1.3rem);
+  letter-spacing: -0.02em;
+}
+
+#script-consent-banner .cc-banner__text {
+  font-family: var(--demo-body);
+  font-size: clamp(0.875rem, 2.8vw, 0.98rem);
+}
+
+#script-consent-banner .cc-btn {
+  font-family: var(--demo-body);
+  font-weight: 700;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+}
+
+@media (max-width: 640px) {
+  #script-consent-banner .cc-btn {
+    /* Full-width stack is already in package CSS; keep pill look */
+    border-radius: 999px;
+  }
+
+  :root {
+    --cc-launcher-size: 2.85rem;
+  }
+}
+
+#script-consent-banner .cc-banner__badge {
+  font-family: var(--demo-body);
+  font-weight: 700;
+}
+
+/* Launcher already inherits --cc-font via banner.css; keep icon crisp */
+#script-consent-launcher {
+  font-family: var(--demo-body);
+}
+
+/* —— Page chrome (not the CMP) —— */
+body.demo-theme-page {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--demo-body);
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #1c1917;
+  background:
+    radial-gradient(900px 420px at 0% 0%, #fef3c7, transparent 55%),
+    radial-gradient(700px 360px at 100% 10%, #ffedd5, transparent 50%),
+    #fafaf9;
+}
+
+.demo-theme-shell {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 6rem;
+}
+
+.demo-theme-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.demo-theme-nav a {
+  color: #b45309;
+  text-decoration: none;
+}
+
+.demo-theme-nav a:hover {
+  text-decoration: underline;
+}
+
+.demo-theme-nav .sep {
+  color: #d6d3d1;
+  font-weight: 400;
+}
+
+.demo-theme-card {
+  background: #fff;
+  border: 1px solid #e7e5e4;
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(28, 25, 23, 0.06);
+  padding: 1.75rem 1.5rem;
+}
+
+.demo-theme-card h1 {
+  margin: 0 0 0.5rem;
+  font-family: var(--demo-display);
+  font-size: clamp(1.6rem, 4vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.demo-theme-card p {
+  margin: 0 0 1rem;
+  color: #57534e;
+}
+
+.demo-theme-card code {
+  font-size: 0.88em;
+  background: #f5f5f4;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.demo-theme-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+/* Page control that opens the same banner as the floating launcher */
+.demo-open-banner {
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--demo-body);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fffbeb;
+  background: linear-gradient(180deg, #d97706, #b45309);
+  border-radius: 999px;
+  padding: 0.75rem 1.35rem;
+  box-shadow: 0 8px 20px rgba(180, 83, 9, 0.3);
+}
+
+.demo-open-banner:hover {
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+}
+
+.demo-open-banner:focus-visible {
+  outline: none;
+  box-shadow: var(--cc-focus);
+}
+
+.demo-theme-list {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+  color: #57534e;
+}
+
+.demo-theme-list li {
+  margin-bottom: 0.35rem;
+}

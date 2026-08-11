@@ -1,0 +1,22 @@
+services:
+  web:
+    build: .
+    image: django-script-consent-example:latest
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      DEBUG: "${DEBUG:-1}"
+      SECRET_KEY: "${SECRET_KEY:-docker-example-not-for-production}"
+      ALLOWED_HOSTS: "${ALLOWED_HOSTS:-*}"
+      CSRF_TRUSTED_ORIGINS: "${CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}"
+      LANGUAGE_CODE: "${LANGUAGE_CODE:-en}"
+      SQLITE_PATH: /data/db.sqlite3
+      DJANGO_SUPERUSER_USERNAME: "${DJANGO_SUPERUSER_USERNAME:-admin}"
+      DJANGO_SUPERUSER_PASSWORD: "${DJANGO_SUPERUSER_PASSWORD:-admin}"
+      DJANGO_SUPERUSER_EMAIL: "${DJANGO_SUPERUSER_EMAIL:-admin@example.com}"
+    volumes:
+      - example_db:/data
+    restart: unless-stopped
+
+volumes:
+  example_db:

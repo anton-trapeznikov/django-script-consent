@@ -1,0 +1,45 @@
+{% load script_consent static i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>django-script-consent demo</title>
+  {% consent_scripts "head" %}
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    button.linkish { background: none; border: none; color: #2563eb; text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
+  </style>
+</head>
+<body>
+  {% csrf_token %}
+  {% consent_scripts "body_start" %}
+
+  <h1>django-script-consent demo</h1>
+  <p>
+    Minimal example. The consent banner appears when there is no valid consent
+    or when the banner text / script set has changed.
+  </p>
+  <p>
+    <a href="{% url 'themed_banner' %}">Themed banner</a>
+    (custom fonts on banner + launcher) ·
+    <a href="/privacy/">Privacy</a> ·
+    <a href="/admin/">Admin</a> ·
+    <button type="button" class="linkish" onclick="ScriptConsent && ScriptConsent.open && ScriptConsent.open()">
+      Consent settings
+    </button> ·
+    <button type="button" class="linkish" onclick="ScriptConsent && ScriptConsent.withdraw && ScriptConsent.withdraw()">
+      Withdraw consent
+    </button>
+  </p>
+
+  {% if current_consent %}
+  <p><strong>Current consent:</strong> {{ current_consent.categories|join:", " }}</p>
+  {% else %}
+  <p><em>No valid consent.</em></p>
+  {% endif %}
+
+  {% consent_banner %}
+  {% consent_scripts "body_end" %}
+</body>
+</html>

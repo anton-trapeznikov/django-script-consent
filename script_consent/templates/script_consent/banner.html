@@ -1,0 +1,95 @@
+{% load static i18n %}
+{# Always render root + JS so ScriptConsent.withdraw/open work after consent. #}
+{% csrf_token %}
+<div
+  id="script-consent-banner"
+  class="cc-banner"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="cc-banner-title"
+  aria-describedby="cc-banner-text"
+  data-script-consent-root
+  data-accept-url="{% url 'script_consent:accept' %}"
+  data-dismiss-url="{% url 'script_consent:dismiss' %}"
+  data-withdraw-url="{% url 'script_consent:withdraw' %}"
+  data-auto-open="{% if show_consent_banner %}1{% else %}0{% endif %}"
+  hidden
+>
+  <div class="cc-banner__panel">
+    <button type="button" class="cc-banner__close" data-cc-action="close" aria-label="{% translate 'Close' %}">
+      <span aria-hidden="true">&times;</span>
+    </button>
+
+    <h2 id="cc-banner-title" class="cc-banner__title">{{ script_consent_banner.title }}</h2>
+    <div id="cc-banner-text" class="cc-banner__text">{{ script_consent_banner.text|safe }}</div>
+
+    {% if script_consent_privacy_url %}
+    <p class="cc-banner__privacy">
+      <a href="{{ script_consent_privacy_url }}" target="_blank" rel="noopener noreferrer">
+        {% translate "Privacy policy" %}
+      </a>
+    </p>
+    {% endif %}
+
+    <fieldset class="cc-banner__categories">
+      <legend class="cc-banner__legend">{% translate "Script categories" %}</legend>
+      <ul class="cc-banner__list">
+        {% for cat in script_consent_categories %}
+        <li class="cc-banner__item">
+          <label class="cc-banner__label">
+            <input
+              type="checkbox"
+              class="cc-banner__checkbox"
+              name="cc-category"
+              value="{{ cat.code }}"
+              {% if cat.is_required %}checked disabled data-required="1"{% elif accepted_category_codes and cat.code in accepted_category_codes %}checked{% endif %}
+            >
+            <span class="cc-banner__cat-title">
+              {{ cat.title }}
+              {% if cat.is_required %}<span class="cc-banner__badge">{% translate "required" %}</span>{% endif %}
+            </span>
+            {% if cat.description %}
+            <span class="cc-banner__cat-desc">{{ cat.description }}</span>
+            {% endif %}
+          </label>
+        </li>
+        {% endfor %}
+      </ul>
+    </fieldset>
+
+    <div class="cc-banner__actions">
+      <button type="button" class="cc-btn cc-btn--secondary" data-cc-action="reject_optional">
+        {% translate "Necessary only" %}
+      </button>
+      <button type="button" class="cc-btn cc-btn--secondary" data-cc-action="custom">
+        {% translate "Accept selected" %}
+      </button>
+      <button type="button" class="cc-btn cc-btn--primary" data-cc-action="accept_all">
+        {% translate "Accept all" %}
+      </button>
+    </div>
+  </div>
+</div>
+
+{% if show_settings_button %}
+<button
+  type="button"
+  id="script-consent-launcher"
+  class="cc-launcher"
+  aria-label="{% translate 'Consent settings' %}"
+  title="{% translate 'Consent settings' %}"
+  {% if show_consent_banner %}hidden{% endif %}
+>
+  {# Cookie icon (inline SVG) #}
+  <svg class="cc-launcher__icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+    <path fill="currentColor" d="M21.1 12.5c.1-.5.1-1 .1-1.5 0-5-4-9-9-9-1.1 0-2.2.2-3.2.6-.2.1-.3.3-.3.5 0 1.7-1.4 3.1-3.1 3.1-.2 0-.4.1-.5.3C4.2 7.5 4 8.7 4 10c0 .3 0 .6.1.9-.9.7-1.5 1.8-1.5 3.1 0 1.7 1.1 3.1 2.7 3.6-.1.4-.2.8-.2 1.2 0 2.8 2.2 5 5 5 1.1 0 2.1-.4 2.9-1 .7.6 1.6 1 2.6 1 2.2 0 4-1.8 4-4 0-.3 0-.6-.1-.8 1.3-.6 2.2-1.9 2.2-3.4 0-.7-.2-1.4-.6-2z"/>
+    <circle fill="var(--cc-bg, #fff)" cx="9" cy="10.5" r="1.1"/>
+    <circle fill="var(--cc-bg, #fff)" cx="13.5" cy="9" r="0.9"/>
+    <circle fill="var(--cc-bg, #fff)" cx="12" cy="14" r="1.1"/>
+    <circle fill="var(--cc-bg, #fff)" cx="15.5" cy="13.5" r="0.85"/>
+  </svg>
+</button>
+{% endif %}
+
+<link rel="stylesheet" href="{% static 'script_consent/css/banner.css' %}">
+<script src="{% static 'script_consent/js/banner.js' %}" defer></script>
