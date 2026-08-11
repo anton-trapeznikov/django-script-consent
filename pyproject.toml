@@ -67,10 +67,10 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://gitverse.ru/lesbeg/django-cookie-consent"
-Repository = "https://gitverse.ru/lesbeg/django-cookie-consent"
-Issues = "https://gitverse.ru/lesbeg/django-cookie-consent/issues"
-Mirror = "https://github.com/anton-trapeznikov/django-cookie-consent"
+Homepage = "https://gitverse.ru/lesbeg/django-script-consent"
+Repository = "https://gitverse.ru/lesbeg/django-script-consent"
+Issues = "https://gitverse.ru/lesbeg/django-script-consent/issues"
+Mirror = "https://github.com/anton-trapeznikov/django-script-consent"
 
 [tool.setuptools.packages.find]
 include = ["script_consent*"]
