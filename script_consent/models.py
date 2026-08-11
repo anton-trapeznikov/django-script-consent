@@ -8,13 +8,6 @@ from django.utils.translation import gettext_lazy as _
 
 
 class RuntimeCacheStamp(models.Model):
-    """
-    Singleton generation counter for the runtime cache key.
-
-    Stored in the DB so LocMem/multi-process workers all miss after invalidation
-    instead of serving stale snippet HTML until TTL expiry.
-    """
-
     key = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     generation = models.PositiveIntegerField(default=0)
 
@@ -41,8 +34,6 @@ class RuntimeCacheStamp(models.Model):
 
 
 class ScriptCategory(models.Model):
-    """Consent category catalog (groups of scripts / snippets)."""
-
     code = models.SlugField(_("Code"), max_length=64, unique=True)
     title = models.CharField(_("Title"), max_length=255)
     description = models.TextField(_("Description"), blank=True)
@@ -64,8 +55,6 @@ class ScriptCategory(models.Model):
 
 
 class BannerConfig(models.Model):
-    """Banner text configuration with automatic versioning."""
-
     title = models.CharField(_("Title"), max_length=255)
     text = models.TextField(_("Text"), help_text=_("Simple HTML is allowed"))
     version = models.PositiveIntegerField(_("Version"), default=1)
@@ -80,24 +69,25 @@ class BannerConfig(models.Model):
     def __str__(self) -> str:
         return f"{self.title} (v{self.version})"
 
+    def _get_version(self) -> int:
+        prev_state = BannerConfig.objects.filter(pk=self.pk).first()
+        if prev_state and any(
+            [
+                prev_state.title != self.title,
+                prev_state.text != self.text,
+                self.is_active and not prev_state.is_active,
+            ]
+        ):
+            return prev_state.version + 1
+
+        return self.version
+
     def save(self, *args, **kwargs):
-        update_fields = kwargs.get("update_fields")
-        if self.pk:
-            try:
-                previous = BannerConfig.objects.get(pk=self.pk)
-            except BannerConfig.DoesNotExist:
-                previous = None
-            if previous is not None:
-                text_changed = (
-                    previous.title != self.title or previous.text != self.text
-                )
-                # Bump when copy changes or when this row becomes the active
-                # banner (switching active config must invalidate prior consent).
-                activated = self.is_active and not previous.is_active
-                if text_changed or activated:
-                    self.version = previous.version + 1
-                    if update_fields is not None:
-                        kwargs["update_fields"] = set(update_fields) | {"version"}
+        if self.pk and self.version != (new_version := self._get_version()):
+            self.version = new_version
+
+            if kwargs.get("update_fields") is not None:
+                kwargs["update_fields"] = set(kwargs["update_fields"]) | {"version"}
 
         super().save(*args, **kwargs)
 
@@ -107,25 +97,11 @@ class BannerConfig(models.Model):
             )
 
     @classmethod
-    def get_solo(cls) -> "BannerConfig":
-        """Return the active banner config, creating a default if needed."""
-        from script_consent.defaults import DEFAULT_BANNER
-
-        obj = cls.objects.filter(is_active=True).order_by("-updated_at").first()
-        if obj is not None:
-            return obj
-        obj = cls.objects.order_by("-updated_at").first()
-        if obj is not None:
-            if not obj.is_active:
-                obj.is_active = True
-                obj.save(update_fields=["is_active", "updated_at"])
-            return obj
-        return cls.objects.create(**DEFAULT_BANNER)
+    def get_solo(cls) -> "BannerConfig | None":
+        return cls.objects.filter(is_active=True).order_by("-updated_at").first()
 
 
 class ScriptSnippet(models.Model):
-    """HTML/JS snippet managed via consent."""
-
     class Placement(models.TextChoices):
         HEAD = "head", _("Head")
         BODY_START = "body_start", _("Body start")
@@ -169,15 +145,10 @@ class ScriptSnippet(models.Model):
 
     @cached_property
     def requires_consent(self) -> bool:
-        """True only if the insert is gated by user consent."""
-        if self.always_load:
-            return False
-        return not self.category.is_required
+        return False if self.always_load else not self.category.is_required
 
 
 class ConsentRecord(models.Model):
-    """Record of obtaining, changing, or withdrawing consent."""
-
     class Action(models.TextChoices):
         ACCEPT_ALL = "accept_all", _("Accept all")
         REJECT_OPTIONAL = "reject_optional", _("Necessary only")

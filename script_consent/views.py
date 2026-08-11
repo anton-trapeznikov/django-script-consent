@@ -1,25 +1,27 @@
 import json
 import uuid
+from typing import Any
 
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import HttpRequest, JsonResponse
 from django.views.decorators.http import require_POST
 
+from script_consent import cookies, repositories
+from script_consent.cache import get_runtime_state
+from script_consent.consent import build_consent_state
+from script_consent.ip import get_client_ip
 from script_consent.models import ConsentRecord
-from script_consent.utils import (
-    build_consent_state,
-    clear_consent_cookies,
-    clear_dismiss_cookie,
-    get_client_ip,
-    get_consent_from_request,
-    get_runtime_state,
-    resolve_accepted_categories,
-    set_consent_cookies,
-    set_dismiss_cookie,
-)
+from script_consent.services import resolve_accepted_categories
+
+_ACCEPT_ACTIONS: dict[str, tuple[str, str]] = {
+    "accept_all": ("accept_all", ConsentRecord.Action.ACCEPT_ALL),
+    "reject_optional": ("reject_optional", ConsentRecord.Action.REJECT_OPTIONAL),
+    "custom": ("custom", ConsentRecord.Action.CUSTOM),
+    "only_required": ("reject_optional", ConsentRecord.Action.REJECT_OPTIONAL),
+}
 
 
-def _json_body(request) -> dict:
+def _json_body(request: HttpRequest) -> dict:
     if not request.body:
         return {}
     try:
@@ -29,63 +31,73 @@ def _json_body(request) -> dict:
         return {}
 
 
-def _user_agent(request) -> str:
+def _user_agent(request: HttpRequest) -> str:
     return (request.META.get("HTTP_USER_AGENT") or "")[:2000]
+
+
+def _authenticated_user(request: HttpRequest):
+    user = getattr(request, "user", None)
+    if user is not None and getattr(user, "is_authenticated", False):
+        return user
+    return None
+
+
+def _consent_id_from_request(request: HttpRequest) -> uuid.UUID:
+    existing = cookies.get_consent_from_request(request)
+    return existing.consent_id if existing else uuid.uuid4()
+
+
+def _error(error: str, status: int = 400) -> JsonResponse:
+    return JsonResponse({"ok": False, "error": error}, status=status)
+
+
+def _log_consent(
+    request: HttpRequest,
+    *,
+    consent_id: uuid.UUID,
+    action: str,
+    runtime: dict[str, Any],
+    categories,
+) -> None:
+    repositories.create_consent_record(
+        consent_id=consent_id,
+        user=_authenticated_user(request),
+        ip_address=get_client_ip(request),
+        user_agent=_user_agent(request),
+        action=action,
+        banner_version=runtime["version"],
+        scripts_hash=runtime["scripts_hash"],
+        categories=categories,
+    )
 
 
 @require_POST
 def accept_consent(request):
-    """
-    Accept consent: accept_all | reject_optional | custom.
-    Body JSON: {"action": "...", "categories": ["analytics", ...]}
-    """
     data = _json_body(request)
     action = (data.get("action") or "").strip()
-    action_map = {
-        "accept_all": ConsentRecord.Action.ACCEPT_ALL,
-        "reject_optional": ConsentRecord.Action.REJECT_OPTIONAL,
-        "custom": ConsentRecord.Action.CUSTOM,
-        # aliases from UI
-        "only_required": ConsentRecord.Action.REJECT_OPTIONAL,
-    }
-    if action not in action_map:
-        return JsonResponse(
-            {"ok": False, "error": "invalid_action"},
-            status=400,
-        )
+    if action not in _ACCEPT_ACTIONS:
+        return _error("invalid_action")
 
-    record_action = action_map[action]
-    resolve_key = (
-        "reject_optional"
-        if record_action == ConsentRecord.Action.REJECT_OPTIONAL
-        else (
-            "accept_all"
-            if record_action == ConsentRecord.Action.ACCEPT_ALL
-            else "custom"
-        )
-    )
+    resolve_key, record_action = _ACCEPT_ACTIONS[action]
+
+    runtime = get_runtime_state()
+    if runtime.get("banner") is None:
+        return _error("no_active_banner")
+
     categories = resolve_accepted_categories(
         resolve_key,
         data.get("categories") or [],
     )
-
-    existing = get_consent_from_request(request)
-    consent_id = existing.consent_id if existing else uuid.uuid4()
-
-    runtime = get_runtime_state()
-    user = request.user if getattr(request.user, "is_authenticated", False) else None
+    consent_id = _consent_id_from_request(request)
 
     with transaction.atomic():
-        record = ConsentRecord.objects.create(
+        _log_consent(
+            request,
             consent_id=consent_id,
-            user=user if user and user.is_authenticated else None,
-            ip_address=get_client_ip(request),
-            user_agent=_user_agent(request),
             action=record_action,
-            banner_version=runtime["version"],
-            scripts_hash=runtime["scripts_hash"],
+            runtime=runtime,
+            categories=categories,
         )
-        record.accepted_categories.set(categories)
 
     state = build_consent_state(consent_id, categories)
     response = JsonResponse(
@@ -99,35 +111,28 @@ def accept_consent(request):
             "reload": True,
         }
     )
-    set_consent_cookies(response, state)
-    clear_dismiss_cookie(response)
+    cookies.set_consent_cookies(response, state)
+    cookies.clear_dismiss_cookie(response)
     return response
 
 
 @require_POST
 def dismiss_banner(request):
-    """Close banner for the rest of the day (not consent)."""
     response = JsonResponse({"ok": True, "action": "dismiss"})
-    set_dismiss_cookie(response)
+    cookies.set_dismiss_cookie(response)
     return response
 
 
 @require_POST
 def withdraw_consent(request):
-    """Withdraw consent: log record and clear consent + dismiss cookies."""
-    existing = get_consent_from_request(request)
-    consent_id = existing.consent_id if existing else uuid.uuid4()
+    consent_id = _consent_id_from_request(request)
     runtime = get_runtime_state()
-    user = request.user if getattr(request.user, "is_authenticated", False) else None
-
-    ConsentRecord.objects.create(
+    _log_consent(
+        request,
         consent_id=consent_id,
-        user=user if user and user.is_authenticated else None,
-        ip_address=get_client_ip(request),
-        user_agent=_user_agent(request),
         action=ConsentRecord.Action.WITHDRAW,
-        banner_version=runtime["version"],
-        scripts_hash=runtime["scripts_hash"],
+        runtime=runtime,
+        categories=[],
     )
 
     response = JsonResponse(
@@ -138,6 +143,6 @@ def withdraw_consent(request):
             "reload": True,
         }
     )
-    clear_consent_cookies(response)
-    clear_dismiss_cookie(response)
+    cookies.clear_consent_cookies(response)
+    cookies.clear_dismiss_cookie(response)
     return response

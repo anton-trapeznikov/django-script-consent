@@ -320,16 +320,16 @@ pip install -e ".[dev]"
 Run the same checks as CI (lint + format + type check + tests):
 
 ```bash
-./scripts/check.sh
+./check.sh
 ```
 
 Auto-fix formatting where possible:
 
 ```bash
-./scripts/check.sh --fix
+./check.sh --fix
 ```
 
-The script runs: `ruff check`, `ruff format --check`, `black --check`, `isort --check-only`, `mypy script_consent tests`, Django tests, and JS tests.
+The script runs: `ruff check`, `ruff format --check`, `black --check`, `isort --check-only`, `mypy script_consent tests`, Django tests, and JS tests. (`./scripts/check.sh` still works as an alias.)
 
 ---
 
@@ -694,16 +694,16 @@ pip install -e ".[dev]"
 Запуск тех же проверок, что и в CI (линтинг, форматирование, типы, тесты):
 
 ```bash
-./scripts/check.sh
+./check.sh
 ```
 
 Автоисправление форматирования, где возможно:
 
 ```bash
-./scripts/check.sh --fix
+./check.sh --fix
 ```
 
-Скрипт выполняет: `ruff check`, `ruff format --check`, `black --check`, `isort --check-only`, `mypy script_consent tests`, Django-тесты и JS-тесты.
+Скрипт выполняет: `ruff check`, `ruff format --check`, `black --check`, `isort --check-only`, `mypy script_consent tests`, Django-тесты и JS-тесты. (`./scripts/check.sh` — алиас.)
 
 ---
 

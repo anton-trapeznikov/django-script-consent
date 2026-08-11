@@ -1,5 +1,3 @@
-"""Default seed data for categories and banner text (English)."""
-
 DEFAULT_CATEGORIES = [
     {
         "code": "technical",
@@ -51,7 +49,6 @@ DEFAULT_BANNER = {
     "is_active": True,
 }
 
-# Demo snippets (console only). category_code must match DEFAULT_CATEGORIES.
 DEFAULT_SNIPPETS = [
     {
         "name": "Demo · Essential",

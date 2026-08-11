@@ -1,14 +1,10 @@
-"""Delete ConsentRecord rows older than a retention window (GDPR storage limitation)."""
-
-from __future__ import annotations
-
 from datetime import timedelta
 
 from django.core.management.base import BaseCommand, CommandError
 from django.utils import timezone
 
+from script_consent import repositories
 from script_consent.conf import app_settings
-from script_consent.models import ConsentRecord
 
 
 class Command(BaseCommand):
@@ -43,9 +39,8 @@ class Command(BaseCommand):
             raise CommandError("--days must be a positive integer.")
 
         cutoff = timezone.now() - timedelta(days=days)
-        qs = ConsentRecord.objects.filter(created_at__lt=cutoff)
-        count = qs.count()
         if options["dry_run"]:
+            count = repositories.count_consent_records_before(cutoff)
             self.stdout.write(
                 self.style.WARNING(
                     f"Would delete {count} consent record(s) older than {days} day(s) "
@@ -54,7 +49,7 @@ class Command(BaseCommand):
             )
             return
 
-        deleted, _ = qs.delete()
+        deleted, _ = repositories.purge_consent_records_before(cutoff)
         self.stdout.write(
             self.style.SUCCESS(
                 f"Deleted {deleted} consent record(s) older than {days} day(s)."
