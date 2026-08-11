@@ -1,8 +1,8 @@
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from script_consent.cache import invalidate_runtime_cache
 from script_consent.models import BannerConfig, ScriptCategory, ScriptSnippet
-from script_consent.utils import invalidate_runtime_cache
 
 
 @receiver(post_save, sender=BannerConfig)

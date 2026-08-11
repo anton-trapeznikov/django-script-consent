@@ -20,8 +20,8 @@
       <span aria-hidden="true">&times;</span>
     </button>
 
-    <h2 id="cc-banner-title" class="cc-banner__title">{{ script_consent_banner.title }}</h2>
-    <div id="cc-banner-text" class="cc-banner__text">{{ script_consent_banner.text|safe }}</div>
+    <h2 id="cc-banner-title" class="cc-banner__title">{% if script_consent_banner %}{{ script_consent_banner.title }}{% endif %}</h2>
+    <div id="cc-banner-text" class="cc-banner__text">{% if script_consent_banner %}{{ script_consent_banner.text|safe }}{% endif %}</div>
 
     {% if script_consent_privacy_url %}
     <p class="cc-banner__privacy">

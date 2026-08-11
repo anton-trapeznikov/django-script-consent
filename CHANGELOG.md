@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] - 2026-08-02
 
+### Breaking
+- `BannerConfig.get_solo()` no longer invents a banner: it returns the active row or `None`.
+  Inactive rows are **not** reactivated and a default is **not** created on read.
+  Seed data remains the responsibility of migrations and admin.
+- Without an active banner the consent dialog is not shown; `POST /accept/` returns
+  `400` with `{"ok": false, "error": "no_active_banner"}`. Required / `always_load`
+  scripts still inject.
+
 ### Changed
+- Internal layout: former `utils.py` replaced by focused modules `cache`, `consent`,
+  `cookies`, `hashing`, `ip`, `services`, and `repositories` (ORM boundary).
+  The `script_consent.utils` module is removed — import from those modules directly.
 - Default `COOKIE_HTTPONLY` is `True`.
 - Signed consent cookies enforce `MAX_AGE` via `signing.loads(..., max_age=...)`.
 - `X-Forwarded-For` is ignored unless `TRUST_X_FORWARDED_FOR=True`.
@@ -15,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Accept path creates `ConsentRecord` + M2M inside `transaction.atomic`.
 - Middleware injects only into HTTP 200 HTML responses.
 - `ConsentRecord` remains fully read-only in admin (no delete); use `purge_consent_records` for retention.
+- Test suite reorganized into `tests/unit/` (mocked) and `tests/integration/`.
 
 ### Fixed
 - `scripts_hash` now includes category `is_required` / load policy and purpose text (title, description), so flipping a category to required or changing purpose invalidates prior consent.

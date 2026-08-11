@@ -158,7 +158,19 @@ describe("ScriptConsent banner", function () {
         queryBtn(dom.root, "accept_all").click();
         await flushPromises();
         expect(global.fetch).toHaveBeenCalledTimes(1);
-        var body = JSON.parse(global.fetch.mock.calls[0][1].body);
+        var call = global.fetch.mock.calls[0];
+        expect(call[0]).toBe("/script-consent/accept/");
+        expect(call[1]).toEqual(
+            expect.objectContaining({
+                method: "POST",
+                credentials: "same-origin",
+                headers: expect.objectContaining({
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                }),
+            })
+        );
+        var body = JSON.parse(call[1].body);
         expect(body.action).toBe("accept_all");
         expect(body.categories).toEqual(["required", "analytics", "marketing"]);
         expect(dom.root.hidden).toBe(true);
@@ -275,6 +287,18 @@ describe("ScriptConsent banner", function () {
         expect(hook).toHaveBeenCalledWith(["required", "analytics"]);
     });
 
+    test("calls onCustom hook when saving custom selection", async function () {
+        var dom = setupDom({ banner: { autoOpen: "1" } });
+        var hook = jest.fn();
+        window.ScriptConsent = { onCustom: hook };
+        dom.root.querySelector('input[value="analytics"]').checked = true;
+        mockFetch(mockOk({ ok: true, categories: ["required", "analytics"], reload: false }));
+        loadBanner();
+        queryBtn(dom.root, "custom").click();
+        await flushPromises();
+        expect(hook).toHaveBeenCalledWith(["required", "analytics"]);
+    });
+
     test("calls onRejectOptional hook when rejecting optional", async function () {
         var dom = setupDom({ banner: { autoOpen: "1" } });
         var hook = jest.fn();
@@ -335,10 +359,25 @@ describe("ScriptConsent banner", function () {
         expect(dom.root.hidden).toBe(true);
     });
 
+    test("plays launcher attention on manual close when motion is allowed", function () {
+        window.matchMedia = jest.fn().mockReturnValue({ matches: false });
+        var dom = setupDom({ banner: { autoOpen: "0" } });
+        loadBanner();
+        dom.launcher.click();
+        expect(dom.root.hidden).toBe(false);
+        queryBtn(dom.root, "close").click();
+        // hide() → showLauncher({ attention: true }) when not reloading
+        expect(dom.launcher.hidden).toBe(false);
+        expect(dom.launcher.classList.contains("cc-launcher--attention")).toBe(true);
+    });
+
     test("does not play launcher attention when reduced motion is preferred", function () {
         window.matchMedia = jest.fn().mockReturnValue({ matches: true });
         var dom = setupDom({ banner: { autoOpen: "0" } });
         loadBanner();
+        dom.launcher.click();
+        queryBtn(dom.root, "close").click();
+        expect(dom.launcher.hidden).toBe(false);
         expect(dom.launcher.classList.contains("cc-launcher--attention")).toBe(false);
     });
 });
