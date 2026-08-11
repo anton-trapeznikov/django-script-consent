@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-script-consent"
-version = "0.2.0"
+version = "0.2.1"
 description = "Django CMP: granular script consent with strict binding to active HTML/JS snippets"
 readme = "README.md"
 requires-python = ">=3.10"
