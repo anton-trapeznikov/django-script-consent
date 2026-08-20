@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-script-consent"
-version = "0.2.1"
+version = "0.2.2"
 description = "Django CMP: granular script consent with strict binding to active HTML/JS snippets"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,6 +35,8 @@ classifiers = [
     "Framework :: Django :: 5.0",
     "Framework :: Django :: 5.1",
     "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Framework :: Django :: 6.1",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
@@ -43,16 +45,17 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Internet :: WWW/HTTP",
     "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
 ]
 dependencies = [
-    "Django>=4.2,<6",
+    "Django>=4.2,<7",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "Django>=4.2,<6",
+    "Django>=4.2,<7",
     "black",
     "build",
     "coverage",

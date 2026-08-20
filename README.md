@@ -4,7 +4,7 @@
 
 Reusable Django application for **explicit, granular consent to HTML/JS snippets** (analytics, marketing, widgets) with a **strict binding**: consent is valid only for the exact set of active scripts, load policy, and purpose text that existed when the user agreed.
 
-- Django **4.2+** / **5.x** · Python **3.10+**
+- Django **4.2+** / **5.x** / **6.x** · Python **3.10–3.14**
 - Python package: **`script_consent`** · settings: **`SCRIPT_CONSENT`**
 - First-party signed consent cookie + server-side `ConsentRecord` audit log
 - Ready-made banner (accept all / custom / necessary only / withdraw / dismiss)
@@ -381,7 +381,7 @@ Runtime state (snippets, hash, banner) is cached. Invalidation bumps a **DB-back
 
 Переиспользуемое Django-приложение для **явного, гранулярного согласия на HTML/JS-сниппеты** (аналитика, маркетинг, виджеты) со **строгой привязкой**: согласие действительно только для того набора активных скриптов, политики загрузки и текста целей, которые были в момент согласия.
 
-- Django **4.2+** / **5.x** · Python **3.10+**
+- Django **4.2+** / **5.x** / **6.x** · Python **3.10–3.14**
 - Python-пакет: **`script_consent`** · настройки: **`SCRIPT_CONSENT`**
 - Собственная подписанная cookie согласия + серверный журнал `ConsentRecord`
 - Готовый баннер (принять всё / выборочно / только необходимые / отозвать / закрыть)
