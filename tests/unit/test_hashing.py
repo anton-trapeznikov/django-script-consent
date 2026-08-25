@@ -39,6 +39,7 @@ class ComputeScriptsHashFromRowsTests(SimpleTestCase):
             "requires_consent": True,
             "code": "<script>1</script>",
             "order": 0,
+            "recipient": "",
         }
         row.update(overrides)
         return row
@@ -119,3 +120,20 @@ class ComputeScriptsHashFromRowsTests(SimpleTestCase):
         a = compute_scripts_hash_from_rows(scripts, [self._category(is_required=False)])
         b = compute_scripts_hash_from_rows(scripts, [self._category(is_required=True)])
         self.assertNotEqual(a, b)
+
+    def test_recipient_changes_hash(self):
+        a = compute_scripts_hash_from_rows([self._script(recipient="")])
+        b = compute_scripts_hash_from_rows([self._script(recipient="Yandex Metrica")])
+        self.assertNotEqual(a, b)
+
+    def test_same_recipient_same_hash(self):
+        a = compute_scripts_hash_from_rows([self._script(recipient="Yandex Metrica")])
+        b = compute_scripts_hash_from_rows([self._script(recipient="Yandex Metrica")])
+        self.assertEqual(a, b)
+
+    def test_missing_recipient_matches_empty(self):
+        with_empty = compute_scripts_hash_from_rows([self._script(recipient="")])
+        row = self._script()
+        row.pop("recipient")
+        missing = compute_scripts_hash_from_rows([row])
+        self.assertEqual(with_empty, missing)

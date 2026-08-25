@@ -186,6 +186,92 @@ class CategoriesForBannerTests(SimpleTestCase):
         codes = {c["code"] for c in cats}
         self.assertIn("technical", codes)
         self.assertIn("analytics", codes)
+        for cat in cats:
+            self.assertEqual(cat["recipients"], [])
+
+    @patch("script_consent.consent.get_runtime_state")
+    def test_aggregates_unique_recipients_in_script_order(self, mock_runtime):
+        runtime = make_runtime(
+            scripts=[
+                {
+                    "id": 1,
+                    "name": "Session",
+                    "category_id": 1,
+                    "category_code": "technical",
+                    "is_required": True,
+                    "always_load": False,
+                    "requires_consent": False,
+                    "placement": "head",
+                    "code": "<!-- req -->",
+                    "order": 0,
+                    "recipient": "only us",
+                },
+                {
+                    "id": 2,
+                    "name": "Metrica",
+                    "category_id": 2,
+                    "category_code": "analytics",
+                    "is_required": False,
+                    "always_load": False,
+                    "requires_consent": True,
+                    "placement": "body_end",
+                    "code": "<!-- m -->",
+                    "order": 10,
+                    "recipient": "Yandex Metrica",
+                },
+                {
+                    "id": 3,
+                    "name": "Empty recipient",
+                    "category_id": 2,
+                    "category_code": "analytics",
+                    "is_required": False,
+                    "always_load": False,
+                    "requires_consent": True,
+                    "placement": "body_end",
+                    "code": "<!-- skip -->",
+                    "order": 11,
+                    "recipient": "  ",
+                },
+                {
+                    "id": 4,
+                    "name": "Duplicate",
+                    "category_id": 2,
+                    "category_code": "analytics",
+                    "is_required": False,
+                    "always_load": False,
+                    "requires_consent": True,
+                    "placement": "body_end",
+                    "code": "<!-- dup -->",
+                    "order": 12,
+                    "recipient": "Yandex Metrica",
+                },
+                {
+                    "id": 5,
+                    "name": "Second vendor",
+                    "category_id": 2,
+                    "category_code": "analytics",
+                    "is_required": False,
+                    "always_load": False,
+                    "requires_consent": True,
+                    "placement": "body_end",
+                    "code": "<!-- vk -->",
+                    "order": 13,
+                    "recipient": "VK Ads",
+                },
+            ]
+        )
+        mock_runtime.return_value = runtime
+        by_code = {c["code"]: c["recipients"] for c in categories_for_banner()}
+        self.assertEqual(by_code["technical"], ["only us"])
+        self.assertEqual(by_code["analytics"], ["Yandex Metrica", "VK Ads"])
+
+    @patch("script_consent.consent.get_runtime_state")
+    def test_does_not_mutate_cached_category_rows(self, mock_runtime):
+        runtime = make_runtime()
+        runtime["scripts"][1]["recipient"] = "Yandex Metrica"
+        mock_runtime.return_value = runtime
+        categories_for_banner()
+        self.assertNotIn("recipients", runtime["categories"][1])
 
 
 class BuildConsentStateTests(SimpleTestCase):
@@ -255,6 +341,66 @@ class BannerTemplateContextTests(SimpleTestCase):
         self.assertEqual(ctx["script_consent_categories"], custom_cats)
         self.assertIsNone(ctx["script_consent_banner"])
         self.assertEqual(ctx["script_consent_privacy_url"], "/custom-privacy/")
+
+    @patch("script_consent.consent.categories_for_banner", return_value=[])
+    @patch("script_consent.consent.should_show_banner", return_value=False)
+    def test_banner_privacy_url_is_used(self, _mock_show, _mock_cats):
+        banner = {
+            "id": 1,
+            "title": "Cookies",
+            "text": "Text",
+            "operator": "",
+            "privacy_url": "/legal/privacy/",
+            "version": 1,
+            "is_active": True,
+        }
+        ctx = banner_template_context(
+            make_request(),
+            consent=None,
+            categories=[],
+            banner=banner,
+        )
+        self.assertEqual(ctx["script_consent_privacy_url"], "/legal/privacy/")
+
+    @patch("script_consent.consent.categories_for_banner", return_value=[])
+    @patch("script_consent.consent.should_show_banner", return_value=False)
+    def test_empty_banner_privacy_url_hides_link(self, _mock_show, _mock_cats):
+        banner = {
+            "id": 1,
+            "title": "Cookies",
+            "text": "Text",
+            "operator": "",
+            "privacy_url": "",
+            "version": 1,
+            "is_active": True,
+        }
+        ctx = banner_template_context(
+            make_request(),
+            consent=None,
+            categories=[],
+            banner=banner,
+        )
+        self.assertIsNone(ctx["script_consent_privacy_url"])
+
+    @patch("script_consent.consent.categories_for_banner", return_value=[])
+    @patch("script_consent.consent.should_show_banner", return_value=False)
+    def test_invalid_banner_privacy_url_is_dropped(self, _mock_show, _mock_cats):
+        banner = {
+            "id": 1,
+            "title": "Cookies",
+            "text": "Text",
+            "operator": "",
+            "privacy_url": "javascript:alert(1)",
+            "version": 1,
+            "is_active": True,
+        }
+        ctx = banner_template_context(
+            make_request(),
+            consent=None,
+            categories=[],
+            banner=banner,
+        )
+        self.assertIsNone(ctx["script_consent_privacy_url"])
 
     def test_without_request_no_auto_open(self):
         with patch("script_consent.consent.get_runtime_state") as mock_runtime:

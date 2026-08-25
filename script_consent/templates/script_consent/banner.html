@@ -11,6 +11,7 @@
   data-script-consent-root
   data-accept-url="{% url 'script_consent:accept' %}"
   data-dismiss-url="{% url 'script_consent:dismiss' %}"
+  data-impression-url="{% url 'script_consent:impression' %}"
   data-withdraw-url="{% url 'script_consent:withdraw' %}"
   data-auto-open="{% if show_consent_banner %}1{% else %}0{% endif %}"
   hidden
@@ -23,7 +24,7 @@
     <h2 id="cc-banner-title" class="cc-banner__title">{% if script_consent_banner %}{{ script_consent_banner.title }}{% endif %}</h2>
     <div id="cc-banner-text" class="cc-banner__text">{% if script_consent_banner %}{{ script_consent_banner.text|safe }}{% endif %}</div>
 
-    {% if script_consent_privacy_url %}
+    {% if script_consent_privacy_url and not script_consent_banner.operator %}
     <p class="cc-banner__privacy">
       <a href="{{ script_consent_privacy_url }}" target="_blank" rel="noopener noreferrer">
         {% translate "Privacy policy" %}
@@ -51,6 +52,11 @@
             {% if cat.description %}
             <span class="cc-banner__cat-desc">{{ cat.description }}</span>
             {% endif %}
+            {% if cat.recipients %}
+            <span class="cc-banner__recipients">
+              {% blocktranslate trimmed with names=cat.recipients|join:", " %}Recipients: {{ names }}{% endblocktranslate %}
+            </span>
+            {% endif %}
           </label>
         </li>
         {% endfor %}
@@ -61,13 +67,26 @@
       <button type="button" class="cc-btn cc-btn--secondary" data-cc-action="reject_optional">
         {% translate "Necessary only" %}
       </button>
-      <button type="button" class="cc-btn cc-btn--secondary" data-cc-action="custom">
+      <button type="button" class="cc-btn cc-btn--primary" data-cc-action="custom">
         {% translate "Accept selected" %}
       </button>
-      <button type="button" class="cc-btn cc-btn--primary" data-cc-action="accept_all">
+      <button type="button" class="cc-btn cc-btn--secondary" data-cc-action="accept_all">
         {% translate "Accept all" %}
       </button>
     </div>
+
+    <p class="cc-banner__close-hint">
+      {% translate "Esc and × hide this dialog until the end of the day. Optional scripts stay off; only essential ones run. This is not consent to optional processing." %}
+    </p>
+
+    {% if script_consent_banner.operator %}
+    <p class="cc-banner__operator">
+      {% blocktranslate trimmed with operator=script_consent_banner.operator %}Operator — {{ operator }}. What we store and for how long —{% endblocktranslate %}
+      {% if script_consent_privacy_url %}
+      <a href="{{ script_consent_privacy_url }}" target="_blank" rel="noopener noreferrer">{% translate "Personal data processing policy" %}</a>.
+      {% endif %}
+    </p>
+    {% endif %}
   </div>
 </div>
 

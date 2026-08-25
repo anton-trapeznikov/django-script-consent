@@ -34,6 +34,8 @@ def make_runtime(
             "id": 1,
             "title": "Cookies",
             "text": "Text",
+            "operator": "",
+            "privacy_url": "",
             "version": 1,
             "is_active": True,
         }
@@ -80,6 +82,7 @@ def make_runtime(
                 "placement": "head",
                 "code": "<!-- req -->",
                 "order": 0,
+                "recipient": "",
             },
             {
                 "id": 2,
@@ -92,6 +95,7 @@ def make_runtime(
                 "placement": "body_end",
                 "code": "<!-- opt -->",
                 "order": 10,
+                "recipient": "",
             },
         ]
 

@@ -22,7 +22,7 @@ def compute_scripts_hash_from_rows(
 
     Script line:
       {id}|{category_id}|{category.code}|{placement}|{always_load}|
-      {is_required}|{requires_consent}|{sha256(code)}
+      {is_required}|{requires_consent}|{sha256(code)}|{sha256(recipient)}
 
     Category line (informed consent — purpose text + required flag):
       cat|{id}|{code}|{is_required}|{sha256(title)}|{sha256(description)}
@@ -34,13 +34,16 @@ def compute_scripts_hash_from_rows(
 
     for s in sorted(scripts, key=lambda x: (x.get("order", 0), x["id"])):
         code_hash = hashlib.sha256(s["code"].encode("utf-8")).hexdigest()
+        recipient_hash = hashlib.sha256(
+            (s.get("recipient") or "").encode("utf-8")
+        ).hexdigest()
         always = "1" if s.get("always_load") else "0"
         is_req = "1" if s.get("is_required") else "0"
         needs = "1" if script_row_requires_consent(s) else "0"
 
         lines.append(
             f"{s['id']}|{s['category_id']}|{s['category_code']}|{s['placement']}|"
-            f"{always}|{is_req}|{needs}|{code_hash}"
+            f"{always}|{is_req}|{needs}|{code_hash}|{recipient_hash}"
         )
 
     if categories is not None:

@@ -142,3 +142,91 @@ class ConsentApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["error"], "no_active_banner")
         self.assertEqual(ConsentRecord.objects.count(), 0)
+
+    def _active_banner(self):
+        return BannerConfig.objects.get(is_active=True)
+
+    def test_accept_all_increments_accept_all_counter(self):
+        self.client.post(
+            reverse("script_consent:accept"),
+            data=json.dumps({"action": "accept_all"}),
+            content_type="application/json",
+            **self._csrf_headers(),
+        )
+        banner = self._active_banner()
+        self.assertEqual(banner.accept_all, 1)
+        self.assertEqual(banner.necessary_only, 0)
+        self.assertEqual(banner.custom_saves, 0)
+        self.assertEqual(banner.dismissals, 0)
+
+    def test_reject_optional_increments_necessary_only(self):
+        self.client.post(
+            reverse("script_consent:accept"),
+            data=json.dumps({"action": "reject_optional"}),
+            content_type="application/json",
+            **self._csrf_headers(),
+        )
+        self.assertEqual(self._active_banner().necessary_only, 1)
+
+    def test_custom_increments_custom_saves(self):
+        self.client.post(
+            reverse("script_consent:accept"),
+            data=json.dumps({"action": "custom", "categories": ["analytics"]}),
+            content_type="application/json",
+            **self._csrf_headers(),
+        )
+        self.assertEqual(self._active_banner().custom_saves, 1)
+
+    def test_dismiss_increments_dismissals_without_consent_record(self):
+        response = self.client.post(
+            reverse("script_consent:dismiss"),
+            data="{}",
+            content_type="application/json",
+            **self._csrf_headers(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self._active_banner().dismissals, 1)
+        self.assertEqual(ConsentRecord.objects.count(), 0)
+
+    def test_impression_increments_counter(self):
+        response = self.client.post(
+            reverse("script_consent:impression"),
+            data="{}",
+            content_type="application/json",
+            **self._csrf_headers(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"ok": True, "action": "impression"})
+        self.assertEqual(self._active_banner().impressions, 1)
+
+    def test_impression_requires_csrf(self):
+        response = self.client.post(
+            reverse("script_consent:impression"),
+            data="{}",
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 403)
+
+    def test_impression_without_active_banner_is_ok(self):
+        BannerConfig.objects.filter(is_active=True).update(is_active=False)
+        cache.clear()
+        response = self.client.post(
+            reverse("script_consent:impression"),
+            data="{}",
+            content_type="application/json",
+            **self._csrf_headers(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(BannerConfig.objects.filter(impressions__gt=0).count(), 0)
+
+    def test_dismiss_without_active_banner_is_ok(self):
+        BannerConfig.objects.filter(is_active=True).update(is_active=False)
+        cache.clear()
+        response = self.client.post(
+            reverse("script_consent:dismiss"),
+            data="{}",
+            content_type="application/json",
+            **self._csrf_headers(),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(BannerConfig.objects.filter(dismissals__gt=0).count(), 0)

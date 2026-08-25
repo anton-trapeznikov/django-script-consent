@@ -20,6 +20,12 @@ _ACCEPT_ACTIONS: dict[str, tuple[str, str]] = {
     "only_required": ("reject_optional", ConsentRecord.Action.REJECT_OPTIONAL),
 }
 
+_ACTION_COUNTERS: dict[str, str] = {
+    ConsentRecord.Action.ACCEPT_ALL: "accept_all",
+    ConsentRecord.Action.REJECT_OPTIONAL: "necessary_only",
+    ConsentRecord.Action.CUSTOM: "custom_saves",
+}
+
 
 def _json_body(request: HttpRequest) -> dict:
     if not request.body:
@@ -49,6 +55,13 @@ def _consent_id_from_request(request: HttpRequest) -> uuid.UUID:
 
 def _error(error: str, status: int = 400) -> JsonResponse:
     return JsonResponse({"ok": False, "error": error}, status=status)
+
+
+def _increment_banner_counter(runtime: dict[str, Any], field: str) -> None:
+    banner = runtime.get("banner")
+    if not banner:
+        return
+    repositories.increment_banner_counter(banner["id"], field)
 
 
 def _log_consent(
@@ -98,6 +111,9 @@ def accept_consent(request):
             runtime=runtime,
             categories=categories,
         )
+        counter = _ACTION_COUNTERS.get(record_action)
+        if counter:
+            _increment_banner_counter(runtime, counter)
 
     state = build_consent_state(consent_id, categories)
     response = JsonResponse(
@@ -117,7 +133,14 @@ def accept_consent(request):
 
 
 @require_POST
+def record_impression(request):
+    _increment_banner_counter(get_runtime_state(), "impressions")
+    return JsonResponse({"ok": True, "action": "impression"})
+
+
+@require_POST
 def dismiss_banner(request):
+    _increment_banner_counter(get_runtime_state(), "dismissals")
     response = JsonResponse({"ok": True, "action": "dismiss"})
     cookies.set_dismiss_cookie(response)
     return response

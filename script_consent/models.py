@@ -57,9 +57,41 @@ class ScriptCategory(models.Model):
 class BannerConfig(models.Model):
     title = models.CharField(_("Title"), max_length=255)
     text = models.TextField(_("Text"), help_text=_("Simple HTML is allowed"))
+    operator = models.TextField(
+        _("Operator"),
+        blank=True,
+        default="",
+        help_text=_(
+            "Legal operator details shown in the banner footer. Leave empty to omit."
+        ),
+    )
+    privacy_url = models.CharField(
+        _("Privacy policy URL"),
+        max_length=512,
+        blank=True,
+        default="",
+        help_text=_(
+            "Link shown in the banner. Changing it increments the banner version "
+            "and invalidates prior consents. Leave empty to hide the link. "
+            "Relative paths and http(s) only."
+        ),
+    )
     version = models.PositiveIntegerField(_("Version"), default=1)
     is_active = models.BooleanField(_("Active"), default=True)
     updated_at = models.DateTimeField(_("Updated"), auto_now=True)
+    impressions = models.PositiveIntegerField(
+        _("Banner impressions"), default=0, editable=False
+    )
+    dismissals = models.PositiveIntegerField(
+        _("Explicit closes"), default=0, editable=False
+    )
+    necessary_only = models.PositiveIntegerField(
+        _("Necessary only"), default=0, editable=False
+    )
+    custom_saves = models.PositiveIntegerField(
+        _("Selected saved"), default=0, editable=False
+    )
+    accept_all = models.PositiveIntegerField(_("Accept all"), default=0, editable=False)
 
     class Meta:
         verbose_name = _("Banner configuration")
@@ -75,6 +107,8 @@ class BannerConfig(models.Model):
             [
                 prev_state.title != self.title,
                 prev_state.text != self.text,
+                prev_state.operator != self.operator,
+                prev_state.privacy_url != self.privacy_url,
                 self.is_active and not prev_state.is_active,
             ]
         ):
@@ -113,6 +147,16 @@ class ScriptSnippet(models.Model):
         on_delete=models.PROTECT,
         related_name="scripts",
         verbose_name=_("Category"),
+    )
+    recipient = models.CharField(
+        _("Recipient"),
+        max_length=255,
+        blank=True,
+        default="",
+        help_text=_(
+            "Data recipient shown in the banner for this snippet's category. "
+            "Leave empty to omit."
+        ),
     )
     placement = models.CharField(
         _("Placement"),

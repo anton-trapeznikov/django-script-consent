@@ -61,6 +61,7 @@ def _script_row(s) -> dict[str, Any]:
         "placement": s.placement,
         "code": s.code,
         "order": s.order,
+        "recipient": s.recipient or "",
     }
 
 
@@ -73,6 +74,8 @@ def _banner_payload(banner) -> tuple[dict[str, Any] | None, int]:
             "id": banner.id,
             "title": banner.title,
             "text": banner.text,
+            "operator": banner.operator or "",
+            "privacy_url": banner.privacy_url or "",
             "version": banner.version,
             "is_active": banner.is_active,
         },

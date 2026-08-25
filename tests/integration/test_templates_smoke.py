@@ -22,6 +22,7 @@ class TemplateTagsSmokeTests(TestCase):
             text="Banner text",
             version=1,
             is_active=True,
+            privacy_url="/privacy/",
         )
         ScriptSnippet.objects.create(
             name="Req",
@@ -71,3 +72,61 @@ class TemplateTagsSmokeTests(TestCase):
         html = tpl.render(RequestContext(request, {}))
         self.assertIn("script-consent-banner", html)
         self.assertIn('data-auto-open="0"', html)
+
+    def _render_banner(self):
+        request = self.factory.get("/")
+        tpl = Template("{% load script_consent %}{% consent_banner %}")
+        return tpl.render(RequestContext(request, {}))
+
+    def test_banner_default_has_close_hint_and_primary_on_selected(self):
+        html = self._render_banner()
+        self.assertIn("cc-banner__close-hint", html)
+        self.assertIn("This is not consent to optional processing.", html)
+        self.assertIn('data-cc-action="custom"', html)
+        self.assertRegex(
+            html,
+            r'class="cc-btn cc-btn--primary" data-cc-action="custom"',
+        )
+        self.assertRegex(
+            html,
+            r'class="cc-btn cc-btn--secondary" data-cc-action="accept_all"',
+        )
+        self.assertNotIn("Recipients:", html)
+        self.assertNotIn("cc-banner__operator", html)
+        self.assertIn("Privacy policy", html)
+        self.assertIn("data-impression-url=", html)
+
+    def test_banner_shows_recipients_when_set(self):
+        ScriptSnippet.objects.filter(category=self.analytics).update(
+            recipient="Yandex Metrica"
+        )
+        cache.clear()
+        html = self._render_banner()
+        self.assertIn("Recipients: Yandex Metrica", html)
+
+    def test_banner_uses_privacy_url_from_banner_config(self):
+        BannerConfig.objects.filter(is_active=True).update(privacy_url="/legal/pdn/")
+        cache.clear()
+        html = self._render_banner()
+        self.assertIn('href="/legal/pdn/"', html)
+        self.assertNotIn('href="/privacy/"', html)
+
+    def test_operator_footer_uses_banner_privacy_url(self):
+        BannerConfig.objects.filter(is_active=True).update(
+            operator="Acme LLC",
+            privacy_url="/legal/pdn/",
+        )
+        cache.clear()
+        html = self._render_banner()
+        self.assertIn("cc-banner__operator", html)
+        self.assertIn('href="/legal/pdn/"', html)
+        self.assertNotIn("cc-banner__privacy", html)
+
+    def test_banner_shows_operator_and_hides_top_privacy(self):
+        BannerConfig.objects.filter(is_active=True).update(operator="Acme LLC, INN 123")
+        cache.clear()
+        html = self._render_banner()
+        self.assertIn("cc-banner__operator", html)
+        self.assertIn("Acme LLC, INN 123", html)
+        self.assertIn("Personal data processing policy", html)
+        self.assertNotIn("cc-banner__privacy", html)

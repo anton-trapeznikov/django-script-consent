@@ -214,11 +214,31 @@
   color: var(--cc-muted);
 }
 
+.cc-banner__recipients {
+  grid-column: 2;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--cc-muted);
+}
+
 .cc-banner__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   justify-content: flex-end;
+}
+
+.cc-banner__close-hint,
+.cc-banner__operator {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--cc-muted);
+}
+
+.cc-banner__operator a {
+  color: var(--cc-accent);
+  text-decoration: underline;
 }
 
 .cc-btn {
@@ -389,7 +409,8 @@
     font-size: 0.9rem;
   }
 
-  .cc-banner__cat-desc {
+  .cc-banner__cat-desc,
+  .cc-banner__recipients {
     font-size: 0.78rem;
     line-height: 1.35;
   }

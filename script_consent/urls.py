@@ -8,5 +8,6 @@ app_name = "script_consent"
 urlpatterns = [
     path("accept/", views.accept_consent, name="accept"),
     path("dismiss/", views.dismiss_banner, name="dismiss"),
+    path("impression/", views.record_impression, name="impression"),
     path("withdraw/", views.withdraw_consent, name="withdraw"),
 ]

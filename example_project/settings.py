@@ -3,6 +3,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 
+
 SECRET_KEY = os.environ.get("SECRET_KEY", "example-only-not-for-production")
 DEBUG = os.environ.get("DEBUG", "1") not in ("0", "false", "False", "")
 
@@ -79,7 +80,3 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-SCRIPT_CONSENT = {
-    "PRIVACY_POLICY_URL": "/privacy/",
-}
