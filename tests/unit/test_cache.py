@@ -31,6 +31,7 @@ def _script(**kwargs):
         code="<script></script>",
         order=0,
         is_active=True,
+        recipient="",
     )
     defaults.update(kwargs)
     s = MagicMock()
@@ -44,7 +45,15 @@ class GetRuntimeStateTests(SimpleTestCase):
     @patch("script_consent.cache.repositories")
     def test_with_active_banner(self, repos, dj_cache):
         dj_cache.get.return_value = None
-        banner = MagicMock(id=7, title="T", text="txt", version=3, is_active=True)
+        banner = MagicMock(
+            id=7,
+            title="T",
+            text="txt",
+            operator="",
+            privacy_url="",
+            version=3,
+            is_active=True,
+        )
         cat = _category(id=1, code="analytics", is_required=False)
         script = _script(id=5, category=cat, category_id=1)
         repos.cache_stamp_current.return_value = 1
@@ -55,8 +64,11 @@ class GetRuntimeStateTests(SimpleTestCase):
         state = get_runtime_state()
 
         self.assertEqual(state["banner"]["id"], 7)
+        self.assertEqual(state["banner"]["operator"], "")
+        self.assertEqual(state["banner"]["privacy_url"], "")
         self.assertEqual(state["version"], 3)
         self.assertEqual(len(state["scripts"]), 1)
+        self.assertEqual(state["scripts"][0]["recipient"], "")
         self.assertTrue(state["scripts"][0]["requires_consent"])
         self.assertTrue(state["has_consent_gated_scripts"])
         self.assertEqual(len(state["scripts_hash"]), 64)

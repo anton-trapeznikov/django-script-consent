@@ -18,14 +18,15 @@ Reusable Django application for **explicit, granular consent to HTML/JS snippets
 
 | Feature | Why it matters |
 |--------|----------------|
-| **`scripts_hash` strict mode** | Consent is cryptographically bound to the canonical set of active snippets (code, placement, category, `always_load` / `is_required`) **and** category purpose fields (title, description). Change Metrika code or the analytics blurb → old consent is invalid; the banner returns. |
+| **`scripts_hash` strict mode** | Consent is cryptographically bound to the canonical set of active snippets (code, placement, category, `always_load` / `is_required`, **recipient**) **and** category purpose fields (title, description). Change Metrika code, a recipient, or the analytics blurb → old consent is invalid; the banner returns. |
 | **Banner id + version** | Consent stores the **active banner row id** and version. Switching another `BannerConfig` (even at the same version number) invalidates prior consent. |
 | **Admin-managed HTML/JS snippets** | Paste GTM, Metrika, pixels into admin with placement (`head` / `body_start` / `body_end`). No template deploy for every tracker change. |
 | **Required vs consent-gated vs always-load** | Required categories and `always_load` snippets run without a prompt; optional snippets never load without a matching valid consent. |
 | **Signed consent cookie** | Payload is Django-signed by default (`SIGNED_COOKIE=True`) with server-side `max_age`, HttpOnly on by default. |
 | **Audit log** | Every accept / reject / custom / withdraw writes `ConsentRecord` (categories, banner version, hash, anonymized IP, User-Agent, optional user). |
 | **Withdraw + dismiss** | Users can withdraw later; dismiss (X) only hides the banner until end of day and does **not** enable optional scripts. Withdraw clears dismiss so the banner can reappear. |
-| **Out-of-the-box UI** | Neutral banner, category checkboxes, floating settings button, JS hooks (`ScriptConsent.open/close/withdraw`). |
+| **Out-of-the-box UI** | Neutral banner, category checkboxes, recipients and operator when filled, close/Esc explanation, **Accept selected** as the emphasized action, floating settings button, JS hooks (`ScriptConsent.open/close/withdraw`). |
+| **Banner statistics** | Per-banner counters in admin: impressions, explicit closes, necessary only, selected saved, accept all. |
 | **Template tags *or* middleware** | Prefer `{% consent_scripts %}` / `{% consent_banner %}`; optional HTML injection middleware when you cannot edit the base template. |
 | **Multi-process safe cache stamp** | Runtime snapshot uses a DB generation counter so LocMem workers do not serve stale snippets after admin changes. |
 | **Retention command** | `purge_consent_records` + `CONSENT_RECORD_RETENTION_DAYS` for storage limitation. |
@@ -71,7 +72,6 @@ USE_I18N = True
 
 # optional
 SCRIPT_CONSENT = {
-    "PRIVACY_POLICY_URL": "/privacy/",
     "ANONYMIZE_IP": True,
     # "SHOW_SETTINGS_BUTTON": True,
 }
@@ -152,7 +152,6 @@ Template tags remain the canonical integration; middleware is best-effort HTML i
 | `DISMISS_MAX_AGE` | `None` | `None` = until end of local calendar day |
 | `ANONYMIZE_IP` | `True` | Truncate IP stored in `ConsentRecord` |
 | `TRUST_X_FORWARDED_FOR` | `False` | Use first `X-Forwarded-For` hop (only behind a trusted proxy) |
-| `PRIVACY_POLICY_URL` | `/privacy/` | Link in the banner (`None` to hide; only `/…` or `http(s)://`) |
 | `CACHE_TIMEOUT` | 3600 | Runtime cache TTL |
 | `SIGNED_COOKIE` | `True` | Sign consent payload with Django signing |
 | `COOKIE_SAMESITE` | `Lax` | |
@@ -167,14 +166,15 @@ Template tags remain the canonical integration; middleware is best-effort HTML i
 
 1. Cookie payload: `consent_id`, `categories`, `banner_id`, `banner_version`, `scripts_hash`.
 2. Consent is **valid** only if active banner **id + version** and `scripts_hash` **exactly** match the server.
-3. `scripts_hash` = SHA-256 over active snippets (including load-policy flags) **and** active category purpose fields (`is_required`, title, description). Changing policy or purpose text invalidates prior consent.
-4. Closing with **X** is not consent: optional scripts stay off; banner stays hidden until the next day.
+3. `scripts_hash` = SHA-256 over active snippets (including load-policy flags and `recipient`) **and** active category purpose fields (`is_required`, title, description). Changing policy, purpose text, or a recipient invalidates prior consent.
+4. Closing with **X** / Esc is not consent: optional scripts stay off; banner stays hidden until the next day. The banner states this explicitly.
 5. Withdraw: `POST /script-consent/withdraw/` + `ConsentRecord(action=withdraw)` (also clears the dismiss cookie).
 
 | Method | URL | Purpose |
 |--------|-----|---------|
 | POST | `/script-consent/accept/` | `accept_all` / `reject_optional` / `custom` |
-| POST | `/script-consent/dismiss/` | Close with X |
+| POST | `/script-consent/dismiss/` | Close with X / Esc |
+| POST | `/script-consent/impression/` | Count an auto-open banner impression |
 | POST | `/script-consent/withdraw/` | Withdraw consent |
 
 After accept/withdraw the page reloads by default (correct placement of `head` scripts).
@@ -184,8 +184,8 @@ After accept/withdraw the page reloads by default (correct placement of `head` s
 ## Admin
 
 - **Script categories** (`ScriptCategory`) — order, `is_required`, active flag
-- **Script snippets** (`ScriptSnippet`) — placement (`head` / `body_start` / `body_end`), **load without consent**, code preview
-- **Banner** — title/text; version bumps on text change or activation
+- **Script snippets** (`ScriptSnippet`) — placement (`head` / `body_start` / `body_end`), optional **recipient** (shown per category in the banner), **load without consent**, code preview
+- **Banner** — title/text/optional operator and privacy policy URL; version bumps on title, text, operator, privacy URL change, or activation. Read-only statistics: impressions, explicit closes, necessary only, selected saved, accept all
 - **Consent records** — read-only audit (no delete in admin; use `purge_consent_records`)
 
 Snippet HTML/JS is rendered **unescaped** — only trusted staff should edit it.
@@ -395,14 +395,15 @@ Runtime state (snippets, hash, banner) is cached. Invalidation bumps a **DB-back
 
 | Возможность | Зачем это нужно |
 |-------------|-----------------|
-| **Строгий режим `scripts_hash`** | Согласие привязано к каноническому набору активных сниппетов (код, placement, категория, `always_load` / `is_required`) **и** к полям целей категории (title, description). Сменили код Метрики или формулировку analytics → старое согласие недействительно, баннер снова показывается. |
+| **Строгий режим `scripts_hash`** | Согласие привязано к каноническому набору активных сниппетов (код, placement, категория, `always_load` / `is_required`, **получатель**) **и** к полям целей категории (title, description). Сменили код Метрики, получателя или формулировку analytics → старое согласие недействительно, баннер снова показывается. |
 | **Banner id + version** | В cookie сохраняются **id активной строки баннера** и версия. Переключение на другой `BannerConfig` (даже с той же цифрой version) инвалидирует прежнее согласие. |
 | **Сниппеты HTML/JS из админки** | GTM, Метрика, пиксели — вставка в admin с placement (`head` / `body_start` / `body_end`). Не нужно деплоить шаблоны ради каждого трекера. |
 | **Required / gated / always-load** | Обязательные категории и `always_load` грузятся без запроса; опциональные — **только** при валидном согласии на категорию. |
 | **Подписанная cookie согласия** | По умолчанию Django signing (`SIGNED_COOKIE=True`), серверный `max_age`, HttpOnly включён. |
 | **Журнал аудита** | Каждый accept / reject / custom / withdraw пишет `ConsentRecord` (категории, версия баннера, hash, анонимизированный IP, User-Agent, опционально user). |
 | **Withdraw + dismiss** | Пользователь может отозвать согласие позже; «X» только скрывает баннер до конца дня и **не** включает опциональные скрипты. Withdraw сбрасывает dismiss, чтобы баннер мог появиться снова. |
-| **UI из коробки** | Нейтральный баннер, чекбоксы категорий, плавающая кнопка настроек, JS-хуки (`ScriptConsent.open/close/withdraw`). |
+| **UI из коробки** | Нейтральный баннер, чекбоксы категорий, получатели и оператор если заполнены, пояснение про Esc/крестик, акцент на **«Принять выбранные»**, плавающая кнопка настроек, JS-хуки (`ScriptConsent.open/close/withdraw`). |
+| **Статистика баннера** | Счётчики в админке на каждый баннер: показы, явные закрытия, только необходимые, сохранения выбранных, принято всё. |
 | **Template tags *или* middleware** | Предпочтительно `{% consent_scripts %}` / `{% consent_banner %}`; опциональный middleware для инъекции HTML, если base-шаблон нельзя править. |
 | **Кэш, безопасный для multi-process** | Снимок runtime использует DB-счётчик generation — воркеры с LocMem не отдают устаревшие сниппеты после правок в admin. |
 | **Команда retention** | `purge_consent_records` + `CONSENT_RECORD_RETENTION_DAYS` для ограничения срока хранения. |
@@ -448,7 +449,6 @@ USE_I18N = True
 
 # опционально
 SCRIPT_CONSENT = {
-    "PRIVACY_POLICY_URL": "/privacy/",
     "ANONYMIZE_IP": True,
     # "SHOW_SETTINGS_BUTTON": True,
 }
@@ -529,7 +529,6 @@ MIDDLEWARE = [
 | `DISMISS_MAX_AGE` | `None` | `None` = до конца локальных суток |
 | `ANONYMIZE_IP` | `True` | Обрезать IP в `ConsentRecord` |
 | `TRUST_X_FORWARDED_FOR` | `False` | Брать первый hop `X-Forwarded-For` (только за доверенным proxy) |
-| `PRIVACY_POLICY_URL` | `/privacy/` | Ссылка в баннере (`None` — скрыть; только `/…` или `http(s)://`) |
 | `CACHE_TIMEOUT` | 3600 | TTL runtime-кэша |
 | `SIGNED_COOKIE` | `True` | Подпись payload через Django signing |
 | `COOKIE_SAMESITE` | `Lax` | |
@@ -544,14 +543,15 @@ MIDDLEWARE = [
 
 1. Payload cookie: `consent_id`, `categories`, `banner_id`, `banner_version`, `scripts_hash`.
 2. Согласие **валидно**, только если **id + version** активного баннера и `scripts_hash` **точно** совпадают с сервером.
-3. `scripts_hash` = SHA-256 по активным сниппетам (включая флаги загрузки) **и** полям целей категорий (`is_required`, title, description). Смена политики или текста целей инвалидирует согласие.
-4. Закрытие **X** — не согласие: опциональные скрипты выключены; баннер скрыт до следующего дня.
+3. `scripts_hash` = SHA-256 по активным сниппетам (включая флаги загрузки и `recipient`) **и** полям целей категорий (`is_required`, title, description). Смена политики, текста целей или получателя инвалидирует согласие.
+4. Закрытие **X** / Esc — не согласие: опциональные скрипты выключены; баннер скрыт до следующего дня. Баннер говорит об этом явно.
 5. Отзыв: `POST /script-consent/withdraw/` + `ConsentRecord(action=withdraw)` (также очищает dismiss-cookie).
 
 | Метод | URL | Назначение |
 |--------|-----|------------|
 | POST | `/script-consent/accept/` | `accept_all` / `reject_optional` / `custom` |
-| POST | `/script-consent/dismiss/` | Закрыть крестиком |
+| POST | `/script-consent/dismiss/` | Закрыть крестиком / Esc |
+| POST | `/script-consent/impression/` | Засчитать автопоказ баннера |
 | POST | `/script-consent/withdraw/` | Отозвать согласие |
 
 После accept/withdraw страница по умолчанию перезагружается (корректная вставка `head`-скриптов).
@@ -561,8 +561,8 @@ MIDDLEWARE = [
 ## Админка
 
 - **Категории скриптов** (`ScriptCategory`) — порядок, `is_required`, активность
-- **Сниппеты** (`ScriptSnippet`) — placement, **загрузка без согласия**, превью кода
-- **Баннер** — title/text; версия растёт при смене текста или активации
+- **Сниппеты** (`ScriptSnippet`) — placement, опциональный **получатель** (в баннере по категории), **загрузка без согласия**, превью кода
+- **Баннер** — title/text/опциональный оператор и URL политики; версия растёт при смене title, text, operator, privacy URL или при активации. Статистика только для чтения: показы, явные закрытия, только необходимые, сохранения выбранных, принято всё
 - **Записи согласия** — только чтение (удаление в admin запрещено; используйте `purge_consent_records`)
 
 HTML/JS сниппетов выводится **без экранирования** — редактировать должен только доверенный staff.

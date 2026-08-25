@@ -25,6 +25,22 @@ class ScriptSnippetAdminDisplayTests(SimpleTestCase):
         self.assertNotIn("x" * 501, preview)
 
 
+class BannerConfigAdminDisplayTests(SimpleTestCase):
+    def setUp(self):
+        self.admin = sc_admin.BannerConfigAdmin(sc_models.BannerConfig, AdminSite())
+
+    def test_statistics_are_readonly(self):
+        for field in (
+            "impressions",
+            "dismissals",
+            "necessary_only",
+            "custom_saves",
+            "accept_all",
+        ):
+            self.assertIn(field, self.admin.readonly_fields)
+        self.assertIn("impressions", self.admin.list_display)
+
+
 class ConsentRecordAdminDisplayTests(SimpleTestCase):
     def setUp(self):
         self.admin = sc_admin.ConsentRecordAdmin(sc_models.ConsentRecord, AdminSite())

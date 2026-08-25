@@ -94,16 +94,39 @@ def scripts_for_placement(
     return result
 
 
+def _recipients_by_category_code(scripts: list[dict[str, Any]]) -> dict[str, list[str]]:
+    recipients: dict[str, list[str]] = {}
+    seen: dict[str, set[str]] = {}
+
+    for script in scripts:
+        name = (script.get("recipient") or "").strip()
+        if not name:
+            continue
+
+        code = script["category_code"]
+        already = seen.setdefault(code, set())
+        if name in already:
+            continue
+
+        already.add(name)
+        recipients.setdefault(code, []).append(name)
+
+    return recipients
+
+
 def categories_for_banner() -> list[dict[str, Any]]:
     runtime = get_runtime_state()
     gated_codes = {
         s["category_code"] for s in runtime["scripts"] if script_row_requires_consent(s)
     }
+    recipients = _recipients_by_category_code(runtime["scripts"])
     result = []
 
     for c in runtime["categories"]:
         if c["is_required"] or c["code"] in gated_codes:
-            result.append(c)
+            row = dict(c)
+            row["recipients"] = list(recipients.get(c["code"], []))
+            result.append(row)
 
     return result
 
@@ -130,6 +153,18 @@ def build_consent_state(
     )
 
 
+def _banner_privacy_url(banner: Any) -> str:
+    if banner is None:
+        return ""
+    if isinstance(banner, dict):
+        value = banner.get("privacy_url") or ""
+    else:
+        value = getattr(banner, "privacy_url", None) or ""
+    if not isinstance(value, str):
+        return ""
+    return value.strip()
+
+
 def banner_template_context(
     request: HttpRequest | None,
     *,
@@ -148,7 +183,7 @@ def banner_template_context(
         banner = get_runtime_state()["banner"]
 
     if privacy_url is _UNSET:
-        privacy_url = app_settings.PRIVACY_POLICY_URL
+        privacy_url = _banner_privacy_url(banner) or None
 
     privacy_url = sanitize_privacy_policy_url(
         privacy_url if isinstance(privacy_url, str) or privacy_url is None else None

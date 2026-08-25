@@ -1,6 +1,12 @@
 from django.test import TestCase
 
-from script_consent.models import BannerConfig, ScriptCategory, ScriptSnippet
+from script_consent.models import (
+    BannerConfig,
+    RuntimeCacheStamp,
+    ScriptCategory,
+    ScriptSnippet,
+)
+from script_consent.repositories import increment_banner_counter
 
 
 class BannerConfigTests(TestCase):
@@ -78,6 +84,50 @@ class BannerConfigTests(TestCase):
         banner.save()
         self.assertEqual(banner.version, 1)
 
+    def test_version_bumps_on_privacy_url_change(self):
+        banner = BannerConfig.objects.create(
+            title="Title", text="Text", version=1, is_active=True
+        )
+        banner.privacy_url = "/legal/privacy/"
+        banner.save()
+        banner.refresh_from_db()
+        self.assertEqual(banner.version, 2)
+
+    def test_version_bumps_on_operator_change(self):
+        banner = BannerConfig.objects.create(
+            title="Title", text="Text", version=1, is_active=True
+        )
+        banner.operator = "Acme LLC"
+        banner.save()
+        banner.refresh_from_db()
+        self.assertEqual(banner.version, 2)
+
+    def test_version_does_not_bump_on_counter_update(self):
+        banner = BannerConfig.objects.create(
+            title="Title", text="Text", version=4, is_active=True
+        )
+        generation = RuntimeCacheStamp.current()
+        updated = increment_banner_counter(banner.pk, "impressions")
+        banner.refresh_from_db()
+        self.assertEqual(updated, 1)
+        self.assertEqual(banner.impressions, 1)
+        self.assertEqual(banner.version, 4)
+        self.assertEqual(RuntimeCacheStamp.current(), generation)
+
+    def test_stats_default_to_zero_and_operator_empty(self):
+        banner = BannerConfig.objects.create(title="Title", text="Text")
+        self.assertEqual(banner.operator, "")
+        self.assertEqual(banner.impressions, 0)
+        self.assertEqual(banner.dismissals, 0)
+        self.assertEqual(banner.necessary_only, 0)
+        self.assertEqual(banner.custom_saves, 0)
+        self.assertEqual(banner.accept_all, 0)
+
+    def test_increment_unknown_field_raises(self):
+        banner = BannerConfig.objects.create(title="Title", text="Text")
+        with self.assertRaises(ValueError):
+            increment_banner_counter(banner.pk, "version")
+
 
 class ScriptSnippetRequiresConsentTests(TestCase):
     def setUp(self):
@@ -125,3 +175,11 @@ class ScriptSnippetRequiresConsentTests(TestCase):
             always_load=True,
         )
         self.assertFalse(snippet.requires_consent)
+
+    def test_recipient_defaults_empty(self):
+        snippet = ScriptSnippet.objects.create(
+            name="Metrika",
+            category=self.optional,
+            code="<script>/* m */</script>",
+        )
+        self.assertEqual(snippet.recipient, "")

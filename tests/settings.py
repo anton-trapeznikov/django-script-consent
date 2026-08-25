@@ -65,7 +65,6 @@ STATIC_URL = "/static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SCRIPT_CONSENT = {
-    "PRIVACY_POLICY_URL": "/privacy/",
     "SIGNED_COOKIE": True,
     "ANONYMIZE_IP": True,
 }

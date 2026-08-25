@@ -12,7 +12,6 @@ DEFAULTS = {
     "ANONYMIZE_IP": True,
     # Only use X-Forwarded-For when a trusted reverse proxy overwrites it.
     "TRUST_X_FORWARDED_FOR": False,
-    "PRIVACY_POLICY_URL": "/privacy/",
     "CACHE_TIMEOUT": 60 * 60,
     "CACHE_KEY": "script_consent:runtime",
     "COOKIE_SAMESITE": "Lax",

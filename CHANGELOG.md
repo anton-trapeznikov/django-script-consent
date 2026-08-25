@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-08-25
+
+### Changed
+- Banner primary action is **Accept selected**; **Accept all** is no longer visually emphasized (152-FZ).
+- `scripts_hash` now includes snippet `recipient`. Existing consents are invalidated once after upgrade.
+
+### Removed
+- Setting `SCRIPT_CONSENT['PRIVACY_POLICY_URL']`. The privacy link is `BannerConfig.privacy_url`. A leftover key in project settings is ignored.
+
+### Added
+- `ScriptSnippet.recipient` — optional data recipient; unique values are listed per category in the banner when at least one is set.
+- `BannerConfig.operator` — optional operator details. When set, the banner footer shows operator + personal-data policy link; when empty, only the existing privacy link is shown. Changing operator increments banner version.
+- `BannerConfig.privacy_url` — privacy policy link on the banner. Changing it increments the banner version so prior consents are invalidated. Migration copies the former `PRIVACY_POLICY_URL` setting (or `/privacy/` if it was omitted) onto existing rows without bumping version. Leave empty to hide the link.
+- Banner copy explaining that Esc / × hides the dialog until the end of the day and is not consent to optional processing. Close/Esc remains dismiss (no `ConsentRecord`, no reload).
+- Per-banner counters in admin: impressions, explicit closes, necessary only, selected saved, accept all. `POST /script-consent/impression/` records auto-open impressions.
+
 ## [0.2.2] - 2026-08-21
 
 ### Changed

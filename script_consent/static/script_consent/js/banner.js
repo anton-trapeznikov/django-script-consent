@@ -220,6 +220,18 @@
       });
   }
 
+  function recordImpression(root) {
+    var url = root.getAttribute("data-impression-url");
+    if (!url) {
+      return;
+    }
+    postJson(url, {}).catch(function (err) {
+      if (typeof console !== "undefined" && console.error) {
+        console.error("Cookie consent impression failed", err);
+      }
+    });
+  }
+
   function handleDismiss(root) {
     var url = root.getAttribute("data-dismiss-url");
     setBusy(root, true);
@@ -328,6 +340,7 @@
     bind(root);
     if (root.getAttribute("data-auto-open") === "1") {
       show(root, { manual: false });
+      recordImpression(root);
     } else {
       showLauncher();
     }

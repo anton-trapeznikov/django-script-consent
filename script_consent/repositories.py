@@ -3,6 +3,8 @@ from collections.abc import Iterable
 from datetime import datetime
 from typing import Any
 
+from django.db.models import F
+
 from script_consent.models import (
     BannerConfig,
     ConsentRecord,
@@ -11,9 +13,27 @@ from script_consent.models import (
     ScriptSnippet,
 )
 
+BANNER_COUNTER_FIELDS = frozenset(
+    {
+        "impressions",
+        "dismissals",
+        "necessary_only",
+        "custom_saves",
+        "accept_all",
+    }
+)
+
 
 def get_active_banner() -> BannerConfig | None:
     return BannerConfig.get_solo()
+
+
+def increment_banner_counter(banner_id: int, field: str, amount: int = 1) -> int:
+    if field not in BANNER_COUNTER_FIELDS:
+        raise ValueError(f"Unknown banner counter: {field}")
+    return BannerConfig.objects.filter(pk=banner_id).update(
+        **{field: F(field) + amount}
+    )
 
 
 def list_active_categories() -> list[ScriptCategory]:

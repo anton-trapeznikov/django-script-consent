@@ -22,6 +22,9 @@ function makeBanner(attrs) {
     root.dataset.acceptUrl = attrs.acceptUrl || "/script-consent/accept/";
     root.dataset.dismissUrl = attrs.dismissUrl || "/script-consent/dismiss/";
     root.dataset.withdrawUrl = attrs.withdrawUrl || "/script-consent/withdraw/";
+    if (attrs.impressionUrl) {
+        root.dataset.impressionUrl = attrs.impressionUrl;
+    }
     root.dataset.autoOpen = attrs.autoOpen === undefined ? "1" : attrs.autoOpen;
     root.innerHTML = [
         '<button class="cc-banner__close" data-cc-action="close">Close</button>',
@@ -379,5 +382,35 @@ describe("ScriptConsent banner", function () {
         queryBtn(dom.root, "close").click();
         expect(dom.launcher.hidden).toBe(false);
         expect(dom.launcher.classList.contains("cc-launcher--attention")).toBe(false);
+    });
+
+    test("auto-open posts impression when url is set", async function () {
+        setupDom({
+            banner: { autoOpen: "1", impressionUrl: "/script-consent/impression/" },
+        });
+        mockFetch(mockOk({ ok: true }));
+        loadBanner();
+        await flushPromises();
+        expect(global.fetch).toHaveBeenCalledWith(
+            "/script-consent/impression/",
+            expect.objectContaining({ method: "POST" })
+        );
+    });
+
+    test("auto-open does not post impression without url", function () {
+        setupDom({ banner: { autoOpen: "1" } });
+        loadBanner();
+        expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    test("launcher open does not post impression", function () {
+        var dom = setupDom({
+            banner: { autoOpen: "0", impressionUrl: "/script-consent/impression/" },
+        });
+        mockFetch(mockOk({ ok: true }));
+        loadBanner();
+        dom.launcher.click();
+        expect(global.fetch).not.toHaveBeenCalled();
+        expect(dom.root.hidden).toBe(false);
     });
 });

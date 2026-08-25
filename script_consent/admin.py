@@ -45,6 +45,7 @@ class ScriptSnippetAdmin(admin.ModelAdmin):
                 "fields": (
                     "name",
                     "category",
+                    "recipient",
                     "placement",
                     "always_load",
                     "order",
@@ -71,19 +72,39 @@ class ScriptSnippetAdmin(admin.ModelAdmin):
 
 @admin.register(BannerConfig)
 class BannerConfigAdmin(admin.ModelAdmin):
-    list_display = ("title", "version", "is_active", "updated_at")
+    list_display = ("title", "version", "is_active", "impressions", "updated_at")
     list_filter = ("is_active",)
-    readonly_fields = ("version", "updated_at")
+    readonly_fields = (
+        "version",
+        "updated_at",
+        "impressions",
+        "dismissals",
+        "necessary_only",
+        "custom_saves",
+        "accept_all",
+    )
     fieldsets = (
         (
             None,
             {
-                "fields": ("title", "text", "is_active"),
+                "fields": ("title", "text", "operator", "privacy_url", "is_active"),
                 "description": _(
-                    "Changing the title or text, or activating this configuration, "
-                    "automatically increments the version. Consent is bound to the "
-                    "active banner id and version; switching or editing invalidates "
-                    "previously granted consents."
+                    "Changing the title, text, operator, or privacy policy URL, or "
+                    "activating this configuration, automatically increments the "
+                    "version. Consent is bound to the active banner id and version; "
+                    "switching or editing invalidates previously granted consents."
+                ),
+            },
+        ),
+        (
+            _("Statistics"),
+            {
+                "fields": (
+                    "impressions",
+                    "dismissals",
+                    "necessary_only",
+                    "custom_saves",
+                    "accept_all",
                 ),
             },
         ),

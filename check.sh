@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
+# `sh ./check.sh` uses dash on Debian/Ubuntu; dash has no `pipefail`.
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
 set -euo pipefail
 
 # Локальный запуск всех проверок, аналогичных CI.
 # Из корня репозитория:
 #   ./check.sh
 #   ./check.sh --fix
+#   sh ./check.sh   # re-execs with bash
 #
 # Переопределение venv / python:
 #   VENV=.venv ./check.sh
